@@ -1,19 +1,37 @@
 import { useState } from "react";
-import img1 from './assets/img1.jpg';
-import img2 from './assets/img2.jpg';
-import img3 from './assets/img3.jpg';
-import img4 from './assets/img4.jpg';
-import img5 from './assets/img5.jpg';
-import img6 from './assets/img6.jpg';
-import img7 from './assets/img7.jpg';
-import img8 from './assets/img8.jpg';
-import img9 from './assets/img9.jpg';
-import img10 from './assets/img10.jpg';
-import img11 from './assets/img11.jpg';
-import img12 from './assets/img12.jpg';
-import img13 from './assets/img13.jpg';
 
-const vulns = [
+import BlindSSRF from "./assets/Blind Server-Side Request Forgery (SSRF).jpg";
+import BrokenAuth from "./assets/Broken Authentication (Missing JWT Validation).jpg";
+import ExcessiveData from "./assets/Excessive Data Exposure (ID: 15).jpg";
+import Fingerprinting from "./assets/Fingerprinting & Server Information Disclosure (ID: 20).jpg";
+import InsecureStorage from "./assets/Insecure Client-Side Storage (Local Storage Leak).jpg";
+import MissingHeaders from "./assets/Missing Security Headers (ID: 10).jpg";
+import PathTraversal from "./assets/Path Traversal (ID: 13).jpg";
+import PrivilegeEscalation from "./assets/Privilege Escalation via Client-Side Manipulation.jpg";
+import SQLInjection from "./assets/SQL Injection (Authentication Bypass).jpg";
+import SensitiveDisclosure from "./assets/Sensitive Infrastructure Information Disclosure.jpg";
+import VerboseErrors from "./assets/Verbose Error Messages & Internal Information Disclosure.jpg";
+import broken_auth from "./assets/broken_auth.jpg";
+
+interface Vuln {
+  id: number;
+  title: string;
+  severity: "Critical" | "High" | "Medium" | "Low";
+  cwe: string;
+  owasp: string;
+  endpoint: string;
+  desc: string;
+  evidence: string;
+  imgKey: string;
+  imgLabel: string;
+  imgKey2?: string;
+  imgLabel2?: string;
+  before: string;
+  after: string;
+  changed: string;
+}
+
+const vulns: Vuln[] = [
   {
     id: 1,
     title: "SQL Injection (Authentication Bypass)",
@@ -23,7 +41,7 @@ const vulns = [
     endpoint: "https://darrag.online/auth/signin",
     desc: "The login form relies on client-side validation (type=\"email\"). By using browser DevTools to change the input type to \"text\", an attacker can inject SQL payloads. The backend fails to sanitize input, allowing complete authentication bypass.",
     evidence: "Payload: admin' OR '1'='1\\nResult: Successful login without valid password. Input type changed via Inspect Element.",
-    imgKey: "img1",
+    imgKey: "SQLInjection",
     imgLabel: "SQL Injection — DevTools showing payload injected in email field",
     before: `// UserService.cs
 public async Task<User> LoginAsync(string email, string password)
@@ -56,7 +74,7 @@ public async Task<User> LoginAsync(string email, string password)
     endpoint: "darrag.online/settings → API Config",
     desc: "The Base URL field accepts any URI without validation. The server makes unmonitored outbound requests and returns 'Connected' regardless of validity. Enables internal port scanning and access to cloud metadata services.",
     evidence: "Payload: http://192.168.1.10:8080 (internal IP)\\nResponse: 'Connected ✓' status returned, confirming the server made an outbound request to an internal address.",
-    imgKey: "img2",
+    imgKey: "BlindSSRF",
     imgLabel: "SSRF — 'Connected' status returned for an internal IP address, indicating a successful SSRF.",
     before: `// AdminController.cs
 [HttpPost("run-scan")]
@@ -94,7 +112,7 @@ public async Task<IActionResult> RunScan([FromBody] ScanRequest request)
     endpoint: "https://darrag.online/api/VulnEndpoints/download?file=",
     desc: "The download endpoint accepts a 'file' parameter without sanitization. The error response leaked the absolute server path, revealing the application's directory structure on the Linux server.",
     evidence: "Payload: ?file=../../../../etc/passwd\\nLeaked: The error message revealed the full internal path /var/www/project_vulner/publish/backend/ and confirmed the traversal attempt.",
-    imgKey: "img3",
+    imgKey: "PathTraversal",
     imgLabel: "Path Traversal — Server leaks internal path /var/www/project_vulner/ in error response",
     before: `// VulnEndpointsController.cs
 [HttpGet("download")]
@@ -135,7 +153,7 @@ public IActionResult DownloadFile(string file)
     endpoint: "All HTTP responses",
     desc: "HTTP responses lack essential security headers. Absence of CSP, X-Frame-Options, and X-Content-Type-Options exposes users to Clickjacking and XSS attacks.",
     evidence: "Verified via Network tab → Response Headers:\\n• No X-Frame-Options\\n• No Content-Security-Policy\\n• No X-Content-Type-Options",
-    imgKey: "img4",
+    imgKey: "MissingHeaders",
     imgLabel: "Missing Headers — Browser DevTools showing lack of security headers in the response",
     before: `// Program.cs
 app.UseHttpsRedirection();
@@ -166,7 +184,7 @@ app.MapControllers();`,
     endpoint: "https://darrag.online/api/codescans",
     desc: "The /api/codescans endpoint returns complete database objects including internal IDs, full scan metadata, and user-related fields. Visible in Network tab — attacker can gather intelligence on other users' scans.",
     evidence: "The API response for /api/codescans includes sensitive data for all users, not just the authenticated user. The screenshot shows the raw JSON response containing objects with 'id', 'projectName', 'status', 'scanDate', and 'user' fields.",
-    imgKey: "img5",
+    imgKey: "ExcessiveData",
     imgLabel: "Excessive Data Exposure — Raw API response from /api/codescans leaking other users' data",
     before: `// CodeScansController.cs
 [HttpGet]
@@ -199,7 +217,7 @@ public async Task<ActionResult<IEnumerable<CodeScanDto>>> GetScans()
     endpoint: "All error responses",
     desc: "The application exposes detailed internal error messages in production, including absolute file paths and internal server structure that aid attacker reconnaissance.",
     evidence: "Error response exposed: /var/www/project_vulner/publish/backend/ confirming Linux server path.",
-    imgKey: "img3",
+    imgKey: "VerboseErrors",
     imgLabel: "Verbose Errors — Path Traversal response leaking internal server path",
     before: `// Program.cs
 // ❌ Developer exception page active in ALL environments
@@ -227,7 +245,7 @@ app.UseHttpsRedirection();`,
     endpoint: "All HTTP response headers",
     desc: "Response headers reveal Cloudflare as proxy/WAF, specific compression algorithms (zstd), and Cf-Ray identifiers. Simplifies attacker reconnaissance phase.",
     evidence: "Headers found:\\n• Server: cloudflare\\n• Content-Encoding: zstd\\n• Cf-Ray: 9f82d9207a5be1bc-MRS",
-    imgKey: "img4",
+    imgKey: "Fingerprinting",
     imgLabel: "Fingerprinting — Response headers revealing Server: cloudflare, Content-Encoding: zstd",
     before: `// Default ASP.NET Core / Kestrel
 // ❌ Server header included by default`,
@@ -248,9 +266,9 @@ var app = builder.Build();`,
     endpoint: "https://darrag.online/api/admin/users",
     desc: "The /api/admin/users endpoint is publicly accessible without any authentication. A direct GET request with no Authorization header returns a complete user list including IDs, emails, roles, and subscription plans.",
     evidence: "No Authorization header sent → HTTP 200 OK returned.\\nData leaked: admin@codescan.io (Admin/Premium), user@codescan.io (User/Trial), dev@codescan.io (User/Pro)",
-    imgKey: "img7",
+    imgKey: "BrokenAuth",
     imgLabel: "Broken Auth — GET /api/admin/users returns 200 OK without any Authorization header",
-    imgKey2: "img8",
+    imgKey2: "broken_auth",
     imgLabel2: "Admin Data Leak — Full user list with roles and plans returned unauthenticated",
     before: `// AdminController.cs
 [ApiController]
@@ -291,7 +309,7 @@ public class AdminController : ControllerBase
     endpoint: "https://darrag.online/api/admin/config",
     desc: "The /api/admin/config endpoint is publicly accessible and exposes critical production secrets. With the JWT secret key, an attacker can forge admin tokens to permanently impersonate any user.",
     evidence: "Exposed: dbConnectionString: Data Source=ProjectVuln.db\\njwtSecret: dev-secret-key-change ← Allows forging ANY JWT token\\naiServiceUrl: http://ai:8000 ← Internal service exposed",
-    imgKey: "img6",
+    imgKey: "SensitiveDisclosure",
     imgLabel: "Config Exposure — jwtSecret and dbConnectionString exposed at /api/admin/config",
     before: `// AdminController.cs
 [HttpGet("config")]
@@ -323,7 +341,7 @@ public IActionResult GetConfig()
     endpoint: "Browser DevTools → Application → Local Storage",
     desc: "The application trusts the role value stored in Local Storage to render UI components. A user can manually modify role: 'user' to role: 'admin' in DevTools to gain unauthorized access to admin UI features.",
     evidence: "codescan_auth localStorage value modified:\\nBefore: role: \"user\"\\nAfter: role: \"admin\" → Admin UI components revealed",
-    imgKey: "img11",
+    imgKey: "PrivilegeEscalation",
     imgLabel: "Privilege Escalation — role changed from 'user' to 'admin' via DevTools localStorage edit",
     before: `// ❌ Client trusts localStorage role for UI rendering
 const role = JSON.parse(localStorage.getItem('codescan_auth')).user.role;
@@ -349,7 +367,7 @@ public IActionResult PerformCriticalAction()
     endpoint: "Browser → Application → Local Storage → codescan_auth",
     desc: "Sensitive user identity information including email addresses, system roles, and authentication tokens are stored in plain text in browser localStorage. Token value is a hardcoded 'mock-token' — insecure placeholder in production.",
     evidence: "codescan_auth key stores: {user: {id, email: 'demo@codescan.com', role: 'user'}, token: 'mock-token'}\\nAll data visible in plain text to any JavaScript on the page.",
-    imgKey: "img10",
+    imgKey: "InsecureStorage",
     imgLabel: "Insecure Storage — codescan_auth key with plaintext user data in localStorage",
     before: `// ❌ Sensitive data in localStorage — XSS accessible
 localStorage.setItem('codescan_auth', JSON.stringify({
@@ -370,150 +388,423 @@ Response.Cookies.Append("auth_token", jwtToken, new CookieOptions {
   }
 ];
 
-const images = {
-  img1, img2, img3, img4, img5, img6, img7, img8, img9, img10, img11, img12, img13
+const images: Record<string, string> = {
+  BlindSSRF,
+  BrokenAuth,
+  ExcessiveData,
+  Fingerprinting,
+  InsecureStorage,
+  MissingHeaders,
+  PathTraversal,
+  PrivilegeEscalation,
+  SQLInjection,
+  SensitiveDisclosure,
+  VerboseErrors,
+  broken_auth,
 };
 
-const severityColor = {
-  "Critical": { bg: "#fff0f0", border: "#cc0000", text: "#cc0000", badge: "#cc0000" },
-  "High": { bg: "#fff5e6", border: "#e06c00", text: "#e06c00", badge: "#e06c00" },
-  "Medium": { bg: "#fffbe6", border: "#c9a800", text: "#b8860b", badge: "#c9a800" },
-  "Low": { bg: "#f0fff0", border: "#2e7d32", text: "#2e7d32", badge: "#2e7d32" },
+const severityColor: Record<
+  string,
+  {
+    bg: string;
+    border: string;
+    text: string;
+    badge: string;
+  }
+> = {
+  Critical: {
+    bg: "#fff0f0",
+    border: "#cc0000",
+    text: "#cc0000",
+    badge: "#cc0000",
+  },
+  High: {
+    bg: "#fff5e6",
+    border: "#e06c00",
+    text: "#e06c00",
+    badge: "#e06c00",
+  },
+  Medium: {
+    bg: "#fffbe6",
+    border: "#c9a800",
+    text: "#b8860b",
+    badge: "#c9a800",
+  },
+  Low: {
+    bg: "#f0fff0",
+    border: "#2e7d32",
+    text: "#2e7d32",
+    badge: "#2e7d32",
+  },
 };
 
-const counts = { Critical: 0, High: 0, Medium: 0, Low: 0 };
-vulns.forEach(v => counts[v.severity] = (counts[v.severity] || 0) + 1);
+const counts = {
+  Critical: 0,
+  High: 0,
+  Medium: 0,
+  Low: 0,
+};
+
+vulns.forEach((v) => {
+  counts[v.severity] = (counts[v.severity] || 0) + 1;
+});
 
 export default function App() {
-  const [activeVuln, setActiveVuln] = useState(null);
-  const [tab, setTab] = useState({});
-  const [lightboxImage, setLightboxImage] = useState(null);
+  const [activeVuln, setActiveVuln] = useState<number | null>(null);
 
-  const setVulnTab = (id, t) => setTab(prev => ({ ...prev, [id]: t }));
-  const getTab = (id) => tab[id] || "desc";
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
 
   return (
-    <div style={{ fontFamily: "Arial, sans-serif", background: "#f4f6fb", minHeight: "100vh", padding: "0 0 40px 0" }}>
+    <div
+      style={{
+        fontFamily: "Arial, sans-serif",
+        background: "#f4f6fb",
+        minHeight: "100vh",
+        padding: "0 0 40px 0",
+      }}
+    >
+      {/* LIGHTBOX */}
       {lightboxImage && (
-        <div onClick={() => setLightboxImage(null)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, cursor: 'pointer' }}>
-          <img src={lightboxImage} alt="Lightbox" style={{ maxHeight: '90vh', maxWidth: '90vw', borderRadius: 8, boxShadow: '0 0 40px rgba(0,0,0,0.5)' }} />
+        <div
+          onClick={() => setLightboxImage(null)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.85)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: 20,
+            cursor: "pointer",
+          }}
+        >
+          <img
+            src={lightboxImage}
+            alt="Evidence"
+            style={{
+              maxWidth: "95%",
+              maxHeight: "95%",
+              borderRadius: 10,
+              boxShadow: "0 0 30px rgba(0,0,0,0.5)",
+            }}
+          />
         </div>
       )}
 
-      {/* Header */}
-      <div style={{ background: "linear-gradient(135deg, #1a2c6b 0%, #2e4a9e 100%)", color: "#fff", padding: "36px 40px 28px" }}>
-        <div style={{ fontSize: 11, letterSpacing: 3, color: "#aac4ff", marginBottom: 8 }}>CONFIDENTIAL — SECURITY ASSESSMENT</div>
-        <div style={{ fontSize: 28, fontWeight: 900, letterSpacing: 1 }}>Penetration Test Report</div>
-        <div style={{ fontSize: 15, color: "#c5d5ff", marginTop: 6 }}>Target: <b style={{ color: "#fff" }}>darrag.online</b> &nbsp;|&nbsp; Date: May 8, 2026</div>
-        <div style={{ display: "flex", gap: 16, marginTop: 24 }}>
+      {/* HEADER */}
+      <div
+        style={{
+          background:
+            "linear-gradient(135deg, #1a2c6b 0%, #2e4a9e 100%)",
+          color: "#fff",
+          padding: "36px 40px 28px",
+        }}
+      >
+        <div
+          style={{
+            fontSize: 11,
+            letterSpacing: 3,
+            color: "#aac4ff",
+            marginBottom: 8,
+          }}
+        >
+          CONFIDENTIAL — SECURITY ASSESSMENT
+        </div>
+
+        <div
+          style={{
+            fontSize: 28,
+            fontWeight: 900,
+            letterSpacing: 1,
+          }}
+        >
+          Penetration Test Report
+        </div>
+
+        <div
+          style={{
+            fontSize: 15,
+            color: "#c5d5ff",
+            marginTop: 6,
+          }}
+        >
+          Target: <b style={{ color: "#fff" }}>darrag.online</b>
+          &nbsp;|&nbsp; Date: May 8, 2026
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            gap: 16,
+            marginTop: 24,
+          }}
+        >
           {Object.entries(counts).map(([sev, cnt]) => (
-            <div key={sev} style={{ background: "rgba(255,255,255,0.1)", borderRadius: 10, padding: "10px 20px", textAlign: "center", border: `2px solid ${severityColor[sev]?.badge || '#fff'}` }}>
-              <div style={{ fontSize: 26, fontWeight: 900, color: severityColor[sev]?.badge || "#fff" }}>{cnt}</div>
-              <div style={{ fontSize: 11, color: "#ddeeff", letterSpacing: 1 }}>{sev.toUpperCase()}</div>
+            <div
+              key={sev}
+              style={{
+                background: "rgba(255,255,255,0.1)",
+                borderRadius: 10,
+                padding: "10px 20px",
+                textAlign: "center",
+                border: `2px solid ${
+                  severityColor[sev as keyof typeof severityColor]?.badge || "#fff"
+                }`,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 26,
+                  fontWeight: 900,
+                  color: severityColor[sev as keyof typeof severityColor]?.badge || "#fff",
+                }}
+              >
+                {cnt}
+              </div>
+
+              <div
+                style={{
+                  fontSize: 11,
+                  color: "#ddeeff",
+                  letterSpacing: 1,
+                }}
+              >
+                {sev.toUpperCase()}
+              </div>
             </div>
           ))}
-          <div style={{ background: "rgba(255,255,255,0.1)", borderRadius: 10, padding: "10px 20px", textAlign: "center", border: "2px solid #ffffff44" }}>
-            <div style={{ fontSize: 26, fontWeight: 900 }}>{vulns.length}</div>
-            <div style={{ fontSize: 11, color: "#ddeeff", letterSpacing: 1 }}>TOTAL</div>
+
+          <div
+            style={{
+              background: "rgba(255,255,255,0.1)",
+              borderRadius: 10,
+              padding: "10px 20px",
+              textAlign: "center",
+              border: "2px solid #ffffff44",
+            }}
+          >
+            <div
+              style={{
+                fontSize: 26,
+                fontWeight: 900,
+              }}
+            >
+              {vulns.length}
+            </div>
+
+            <div
+              style={{
+                fontSize: 11,
+                color: "#ddeeff",
+                letterSpacing: 1,
+              }}
+            >
+              TOTAL
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Vuln List */}
+      {/* VULNS */}
       <div style={{ padding: "28px 32px 0" }}>
         {vulns.map((v) => {
-          const sc = severityColor[v.severity] || severityColor["Low"];
+          const sc = severityColor[v.severity];
           const open = activeVuln === v.id;
-          const t = getTab(v.id);
-          return (
-            <div key={v.id} style={{ marginBottom: 16, borderRadius: 10, border: `1.5px solid ${sc.border}`, background: "#fff", overflow: "hidden", boxShadow: "0 2px 8px #0001" }}>
-              {/* Header row */}
-              <div onClick={() => setActiveVuln(open ? null : v.id)}
-                style={{ display: "flex", alignItems: "center", padding: "14px 20px", cursor: "pointer", background: open ? sc.bg : "#fff", gap: 14 }}>
-                <div style={{ width: 32, height: 32, borderRadius: "50%", background: sc.badge, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 13, flexShrink: 0 }}>{v.id}</div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700, fontSize: 15, color: "#1a2c6b" }}>{v.title}</div>
-                  <div style={{ fontSize: 12, color: "#666", marginTop: 2 }}>{v.cwe} &nbsp;|&nbsp; {v.owasp}</div>
-                </div>
-                <span style={{ background: sc.badge, color: "#fff", borderRadius: 6, padding: "3px 12px", fontSize: 12, fontWeight: 700 }}>{v.severity}</span>
-                <span style={{ color: "#aaa", fontSize: 18, marginLeft: 8 }}>{open ? "▲" : "▼"}</span>
-              </div>
 
-              {open && (
-                <div style={{ borderTop: `1.5px solid ${sc.border}`, padding: "0" }}>
-                  {/* Tabs */}
-                  <div style={{ display: "flex", borderBottom: "1px solid #eee", background: "#fafbff" }}>
-                    {["desc", "evidence", "before", "after"].map(tabName => (
-                      <button key={tabName} onClick={() => setVulnTab(v.id, tabName)}
-                        style={{ padding: "10px 20px", border: "none", background: t === tabName ? "#fff" : "transparent",
-                          borderBottom: t === tabName ? `2.5px solid ${sc.badge}` : "2.5px solid transparent",
-                          fontWeight: t === tabName ? 700 : 400, cursor: "pointer", fontSize: 13,
-                          color: t === tabName ? sc.badge : "#555" }}>
-                        {tabName === "desc" ? "📋 Description" : tabName === "evidence" ? "🔍 Evidence" : tabName === "before" ? "❌ Before (Vuln)" : "✅ After (Fixed)"}
-                      </button>
-                    ))}
+          return (
+            <div
+              key={v.id}
+              style={{
+                marginBottom: 16,
+                borderRadius: 10,
+                border: `1.5px solid ${sc.border}`,
+                background: "#fff",
+                overflow: "hidden",
+                boxShadow: "0 2px 8px #0001",
+              }}
+            >
+              {/* HEADER ROW */}
+              <div
+                onClick={() =>
+                  setActiveVuln(open ? null : v.id)
+                }
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  padding: "14px 20px",
+                  cursor: "pointer",
+                  background: open ? sc.bg : "#fff",
+                  gap: 14,
+                }}
+              >
+                <div
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: "50%",
+                    background: sc.badge,
+                    color: "#fff",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontWeight: 900,
+                    fontSize: 13,
+                    flexShrink: 0,
+                  }}
+                >
+                  {v.id}
+                </div>
+
+                <div style={{ flex: 1 }}>
+                  <div
+                    style={{
+                      fontWeight: 700,
+                      fontSize: 15,
+                      color: "#1a2c6b",
+                    }}
+                  >
+                    {v.title}
                   </div>
 
-                  <div style={{ padding: "20px 24px" }}>
-                    {t === "desc" && (
-                      <div>
-                        <div style={{ background: sc.bg, border: `1px solid ${sc.border}`, borderRadius: 8, padding: "10px 16px", marginBottom: 14 }}>
-                          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                            <tbody>
-                              <tr><td style={{ fontWeight: 700, color: "#1a2c6b", width: 100, padding: "4px 0" }}>Severity</td><td style={{ color: sc.text, fontWeight: 700 }}>{v.severity}</td></tr>
-                              <tr><td style={{ fontWeight: 700, color: "#1a2c6b", padding: "4px 0" }}>CWE</td><td>{v.cwe}</td></tr>
-                              <tr><td style={{ fontWeight: 700, color: "#1a2c6b", padding: "4px 0" }}>OWASP</td><td>{v.owasp}</td></tr>
-                              <tr><td style={{ fontWeight: 700, color: "#1a2c6b", padding: "4px 0" }}>Endpoint</td><td style={{ wordBreak: "break-all", color: "#2e4a9e" }}>{v.endpoint}</td></tr>
-                            </tbody>
-                          </table>
-                        </div>
-                        <p style={{ fontSize: 14, lineHeight: 1.7, color: "#333" }}>{v.desc}</p>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: "#666",
+                      marginTop: 2,
+                    }}
+                  >
+                    {v.cwe} | {v.owasp}
+                  </div>
+                </div>
+
+                <span
+                  style={{
+                    background: sc.badge,
+                    color: "#fff",
+                    borderRadius: 6,
+                    padding: "3px 12px",
+                    fontSize: 12,
+                    fontWeight: 700,
+                  }}
+                >
+                  {v.severity}
+                </span>
+              </div>
+
+              {/* CONTENT */}
+              {open && (
+                <div
+                  style={{
+                    borderTop: `1.5px solid ${sc.border}`,
+                    padding: 24,
+                  }}
+                >
+                  <p>{v.desc}</p>
+
+                  <pre
+                    style={{
+                      background: "#1a1a2e",
+                      color: "#00ff88",
+                      borderRadius: 8,
+                      padding: 14,
+                      whiteSpace: "pre-wrap",
+                    }}
+                  >
+                    {v.evidence}
+                  </pre>
+
+                  <div
+                    style={{
+                      marginTop: 16,
+                      cursor: "pointer",
+                    }}
+                    onClick={() =>
+                      setLightboxImage(images[v.imgKey])
+                    }
+                  >
+                    <img
+                      src={images[v.imgKey]}
+                      alt={v.imgLabel}
+                      style={{
+                        width: "100%",
+                        maxWidth: 500,
+                        borderRadius: 8,
+                        border: "1px solid #ddd",
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ marginTop: 24 }}>
+                    <div
+                      style={{
+                        background: "#fff5f5",
+                        border: "1px solid #cc0000",
+                        borderRadius: 8,
+                        marginBottom: 16,
+                      }}
+                    >
+                      <div
+                        style={{
+                          background: "#cc0000",
+                          color: "#fff",
+                          padding: 10,
+                          fontWeight: 700,
+                        }}
+                      >
+                        ❌ BEFORE
                       </div>
-                    )}
-                    {t === "evidence" && (
-                      <div>
-                        <pre style={{ background: "#1a1a2e", color: "#00ff88", borderRadius: 8, padding: "14px 18px", fontSize: 13, lineHeight: 1.6, whiteSpace: "pre-wrap", marginBottom: 16 }}>{v.evidence}</pre>
-                        <div style={{ border: "1px solid #dde", borderRadius: 8, overflow: "hidden" }}>
-                          <div style={{ background: "#e8edf8", padding: "8px 14px", fontSize: 12, fontWeight: 700, color: "#1a2c6b" }}>📸 Screenshot Evidence</div>
-                          <div style={{ background: "#f8f9ff", padding: "24px", color: "#666", fontSize: 13 }}>
-                            <div style={{ marginBottom: 12, cursor: 'pointer' }} onClick={() => setLightboxImage(images[v.imgKey])}>
-                                <div style={{ height: 150, overflow: 'hidden', borderRadius: 6, border: '1px solid #dde' }}>
-                                    <img src={images[v.imgKey]} alt={v.imgLabel} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                </div>
-                                <div style={{ color: "#2e4a9e", fontWeight: 600, marginTop: 8, fontSize: 13 }}>{v.imgLabel}</div>
-                            </div>
-                            {v.imgKey2 && (
-                                <div style={{ marginBottom: 12, cursor: 'pointer' }} onClick={() => setLightboxImage(images[v.imgKey2])}>
-                                    <div style={{ height: 150, overflow: 'hidden', borderRadius: 6, border: '1px solid #dde' }}>
-                                        <img src={images[v.imgKey2]} alt={v.imgLabel2} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                    </div>
-                                    <div style={{ color: "#2e4a9e", fontWeight: 600, marginTop: 8, fontSize: 13 }}>{v.imgLabel2}</div>
-                                </div>
-                            )}
-                            <div style={{ color: "#999", fontSize: 12, marginTop: 6, textAlign: 'center' }}>Screenshot captured during assessment on darrag.online</div>
-                          </div>
-                        </div>
+
+                      <pre
+                        style={{
+                          padding: 16,
+                          margin: 0,
+                          overflowX: "auto",
+                        }}
+                      >
+                        {v.before}
+                      </pre>
+                    </div>
+
+                    <div
+                      style={{
+                        background: "#f0fff4",
+                        border: "1px solid #2e7d32",
+                        borderRadius: 8,
+                      }}
+                    >
+                      <div
+                        style={{
+                          background: "#2e7d32",
+                          color: "#fff",
+                          padding: 10,
+                          fontWeight: 700,
+                        }}
+                      >
+                        ✅ AFTER
                       </div>
-                    )}
-                    {t === "before" && (
-                      <div>
-                        <div style={{ background: "#fff5f5", border: "1.5px solid #cc0000", borderRadius: 8, overflow: "hidden" }}>
-                          <div style={{ background: "#cc0000", color: "#fff", padding: "8px 14px", fontSize: 12, fontWeight: 700 }}>❌ VULNERABLE CODE (BEFORE FIX)</div>
-                          <pre style={{ margin: 0, padding: "16px 18px", fontSize: 13, lineHeight: 1.6, background: "#fff8f8", overflowX: "auto", color: "#1a1a1a" }}>{v.before}</pre>
-                        </div>
-                      </div>
-                    )}
-                    {t === "after" && (
-                      <div>
-                        <div style={{ background: "#f0fff4", border: "1.5px solid #2e7d32", borderRadius: 8, overflow: "hidden", marginBottom: 12 }}>
-                          <div style={{ background: "#2e7d32", color: "#fff", padding: "8px 14px", fontSize: 12, fontWeight: 700 }}>✅ FIXED CODE (AFTER)</div>
-                          <pre style={{ margin: 0, padding: "16px 18px", fontSize: 13, lineHeight: 1.6, background: "#f8fff9", overflowX: "auto", color: "#1a1a1a" }}>{v.after}</pre>
-                        </div>
-                        <div style={{ background: "#eaf4fb", border: "1px solid #aed6f1", borderRadius: 8, padding: "10px 16px", fontSize: 13 }}>
-                          <b style={{ color: "#1a5276" }}>What changed: </b><i style={{ color: "#2c3e50" }}>{v.changed}</i>
-                        </div>
-                      </div>
-                    )}
+
+                      <pre
+                        style={{
+                          padding: 16,
+                          margin: 0,
+                          overflowX: "auto",
+                        }}
+                      >
+                        {v.after}
+                      </pre>
+                    </div>
+
+                    <div
+                      style={{
+                        marginTop: 12,
+                        background: "#eaf4fb",
+                        padding: 12,
+                        borderRadius: 8,
+                      }}
+                    >
+                      <b>What changed:</b> {v.changed}
+                    </div>
                   </div>
                 </div>
               )}
@@ -522,34 +813,17 @@ export default function App() {
         })}
       </div>
 
-      {/* Summary Table */}
-      <div style={{ margin: "32px 32px 0", background: "#fff", borderRadius: 10, border: "1.5px solid #dde3f0", overflow: "hidden" }}>
-        <div style={{ background: "#1a2c6b", color: "#fff", padding: "14px 20px", fontWeight: 700, fontSize: 15 }}>📊 Remediation Summary</div>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
-            <tr style={{ background: "#e8edf8" }}>
-              {["#","Vulnerability","Severity","CWE","Status"].map(h => (
-                <th key={h} style={{ padding: "10px 14px", textAlign: "left", fontSize: 12, fontWeight: 700, color: "#1a2c6b", borderBottom: "1px solid #dde" }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {vulns.map((v, i) => {
-              const sc = severityColor[v.severity] || severityColor["Low"];
-              return (
-                <tr key={v.id} style={{ borderBottom: "1px solid #f0f2f8", background: i % 2 === 0 ? "#fff" : "#fafbff" }}>
-                  <td style={{ padding: "8px 14px", fontSize: 13 }}>{v.id}</td>
-                  <td style={{ padding: "8px 14px", fontSize: 13, fontWeight: 600 }}>{v.title}</td>
-                  <td style={{ padding: "8px 14px" }}><span style={{ background: sc.badge, color: "#fff", borderRadius: 5, padding: "2px 8px", fontSize: 11, fontWeight: 700 }}>{v.severity}</span></td>
-                  <td style={{ padding: "8px 14px", fontSize: 12, color: "#555" }}>{v.cwe}</td>
-                  <td style={{ padding: "8px 14px", fontSize: 12, color: "#1a5276" }}>✅ Remediated</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+      {/* FOOTER */}
+      <div
+        style={{
+          textAlign: "center",
+          color: "#aaa",
+          fontSize: 12,
+          marginTop: 24,
+        }}
+      >
+        End of Report — darrag.online Security Assessment — May 8, 2026
       </div>
-      <div style={{ textAlign: "center", color: "#aaa", fontSize: 12, marginTop: 24 }}>End of Report — darrag.online Security Assessment — May 8, 2026</div>
     </div>
   );
 }
